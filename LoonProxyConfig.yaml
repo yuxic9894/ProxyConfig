@@ -1,0 +1,91 @@
+# =========================
+# Loon Config - Stable BM7 (Final)
+# =========================
+
+[General]
+ip-mode = v4-only
+skip-proxy = 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,localhost,*.local,e.crashlynatics.com
+bypass-tun = 10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,172.16.0.0/12,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,192.168.0.0/16,198.51.100.0/24,203.0.113.0/24,224.0.0.0/4,255.255.255.255/32
+dns-server = system,119.29.29.29,114.114.114.114,223.5.5.5
+allow-wifi-access = false
+wifi-access-http-port = 7222
+wifi-access-socks5-port = 7221
+proxy-test-url = http://bing.com/generate_204
+internet-test-url = http://wifi.vivo.com.cn/generate_204
+test-timeout = 3
+interface-mode = auto
+
+[Proxy]
+
+[Remote Proxy]
+蓝海加速 = https://lancdn.yhui0g.com/app/status/new?token=1a21ff7219903192bab3e7bc1517071c,udp=true,block-quic=true,fast-open=default,vmess-aead=true,skip-cert-verify=true,enabled=true,flexible-sni=false,img-url=shield
+红杏云 = https://106.55.228.246:36666/hxvip?token=6736eb49bff7bae3bf908546dda89337,udp=true,block-quic=true,fast-open=default,vmess-aead=true,skip-cert-verify=true,enabled=true,flexible-sni=false,img-url=cloud
+
+[Proxy Group]
+
+Available = fallback,HK,JP,SG,US,UN,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Available.png
+
+OpenAI = select,JP,SG,US,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/OpenAI.png
+Telegram = select,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png
+YouTube = select,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
+Games = select,HK,JP,SG,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
+
+HK = fallback,HK_Filter,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
+JP = fallback,JP_Filter,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
+SG = fallback,SG_Filter,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
+US = fallback,US_Filter,interval=600,max-timeout=6000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
+
+TW = select,TW_Filter,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Taiwan.png
+KR = select,KR_Filter,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png
+
+UN = fallback,UN_Filter,interval=600,max-timeout=6000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Global.png
+
+[Remote Filter]
+
+HK_Filter = NameRegex, FilterKey = "(?i)(港|HK|Hong Kong|HongKong|hongkong)"
+JP_Filter = NameRegex, FilterKey = "(?i)(日本|东京|大阪|埼玉|JP|Japan|Tokyo|Osaka)"
+SG_Filter = NameRegex, FilterKey = "(?i)(新加坡|SG|Singapore)"
+US_Filter = NameRegex, FilterKey = "(?i)(美|US|USA|United States|UnitedStates|洛杉矶|圣何塞|圣克拉拉|西雅图|达拉斯|凤凰城|波特兰|硅谷|LA|San Jose|Seattle)"
+TW_Filter = NameRegex, FilterKey = "(?i)(台|TW|Taiwan)"
+KR_Filter = NameRegex, FilterKey = "(?i)(KR|Korea|KOR|韩|韓|首尔|Seoul)"
+
+UN_Filter = NameRegex, FilterKey = "(?i)^(?!.*(港|HK|Hong Kong|JP|Japan|日本|SG|Singapore|新加坡|US|USA|United States|美|TW|Taiwan|台|KR|Korea|韩)).*$"
+
+[Rule]
+FINAL,Available
+
+[Remote Rule]
+
+https://raw.githubusercontent.com/Loon0x00/LoonLiteRules/main/direct/cn.list, policy=DIRECT, tag=GEOIP_CN, enabled=true
+
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/OpenAI/OpenAI.list, policy=OpenAI, tag=OpenAI, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Telegram/Telegram.list, policy=Telegram, tag=Telegram, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Game/Game.list, policy=Games, tag=Games, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/YouTube/YouTube.list, policy=YouTube, tag=YouTube, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Proxy/Proxy.list, policy=Available, tag=Global, enabled=true
+
+[Rewrite]
+
+[Script]
+
+[Plugin]
+https://kelee.one/Tool/Loon/Lpx/Block_HTTPDNS.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/BlockAdvertisers.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Remove_ads_by_keli.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Reddit_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/RedPaper_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/PinDuoDuo_remove_ads.lpx, enabled=true
+https://raw.githubusercontent.com/sooyaaabo/Loon/main/Plugin/NeteaseMusic.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Jump_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/JD_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/12306_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Amap_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/XiaChuFang_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Weixin_Official_Accounts_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Bilibili_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/YouTube_remove_ads.lpx, enabled=true
+
+[Mitm]
+skip-server-cert-verify =
+ca-p12 =
+ca-passphrase =
