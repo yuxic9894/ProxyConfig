@@ -4,16 +4,19 @@
 
 [General]
 ip-mode = v4-only
+interface-mode = auto
+
 skip-proxy = 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,localhost,*.local,e.crashlynatics.com
 bypass-tun = 10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,172.16.0.0/12,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,192.168.0.0/16,198.51.100.0/24,203.0.113.0/24,224.0.0.0/4,255.255.255.255/32
-dns-server = system,119.29.29.29,114.114.114.114,223.5.5.5
-allow-wifi-access = false
+
+dns-server = system
+allow-wifi-access = true
 wifi-access-http-port = 7222
 wifi-access-socks5-port = 7221
+
 proxy-test-url = http://bing.com/generate_204
 internet-test-url = http://wifi.vivo.com.cn/generate_204
-test-timeout = 3
-interface-mode = auto
+test-timeout = 5
 
 [Proxy]
 
@@ -23,22 +26,20 @@ interface-mode = auto
 
 [Proxy Group]
 
-Available = fallback,HK,JP,SG,US,UN,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Available.png
+Available = select,HK,JP,SG,US,UN,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Available.png
+OpenAI = select,JP,SG,US,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/OpenAI.png
+Telegram = select,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png
+YouTube = select,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
+Games = select,HK,JP,SG,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
 
-OpenAI = select,JP,SG,US,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/OpenAI.png
-Telegram = select,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png
-YouTube = select,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
-Games = select,HK,JP,SG,Available,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
+HK = fallback,HK_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
+JP = fallback,JP_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
+SG = fallback,SG_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
+US = fallback,US_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
+TW = fallback,TW_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Taiwan.png
+KR = fallback,KR_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png
 
-HK = fallback,HK_Filter,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
-JP = fallback,JP_Filter,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
-SG = fallback,SG_Filter,interval=600,max-timeout=5000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
-US = fallback,US_Filter,interval=600,max-timeout=6000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
-
-TW = select,TW_Filter,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Taiwan.png
-KR = select,KR_Filter,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png
-
-UN = fallback,UN_Filter,interval=600,max-timeout=6000,img-url=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Global.png
+UN = select,UN_Filter,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Global.png
 
 [Remote Filter]
 
@@ -81,11 +82,12 @@ https://kelee.one/Tool/Loon/Lpx/JD_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/12306_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/Amap_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/XiaChuFang_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Spotify_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/Weixin_Official_Accounts_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/Bilibili_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/YouTube_remove_ads.lpx, enabled=true
 
 [Mitm]
-skip-server-cert-verify =
-ca-p12 =
-ca-passphrase =
+skip-server-cert-verify = 
+ca-p12 = 
+ca-passphrase = 
