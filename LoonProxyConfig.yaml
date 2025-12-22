@@ -10,7 +10,7 @@ skip-proxy = 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,localhost,*.local,e.crashly
 bypass-tun = 10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,172.16.0.0/12,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,192.168.0.0/16,198.51.100.0/24,203.0.113.0/24,224.0.0.0/4,255.255.255.255/32
 
 dns-server = system
-allow-wifi-access = true
+allow-wifi-access = false
 wifi-access-http-port = 7222
 wifi-access-socks5-port = 7221
 
@@ -21,16 +21,14 @@ test-timeout = 5
 [Proxy]
 
 [Remote Proxy]
-蓝海加速 = https://lancdn.yhui0g.com/app/status/new?token=1a21ff7219903192bab3e7bc1517071c,udp=true,block-quic=true,fast-open=default,vmess-aead=true,skip-cert-verify=true,enabled=true,flexible-sni=false,img-url=shield
-红杏云 = https://106.55.228.246:36666/hxvip?token=6736eb49bff7bae3bf908546dda89337,udp=true,block-quic=true,fast-open=default,vmess-aead=true,skip-cert-verify=true,enabled=true,flexible-sni=false,img-url=cloud
 
 [Proxy Group]
 
 Available = select,HK,JP,SG,US,UN,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Available.png
-OpenAI = select,JP,SG,US,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/OpenAI.png
+AI Tools = select,JP,SG,US,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ChatGPT.png
 Telegram = select,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png
 YouTube = select,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
-Games = select,HK,JP,SG,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
+Games = select,DIRECT,HK,JP,SG,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
 
 HK = fallback,HK_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
 JP = fallback,JP_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
@@ -43,7 +41,7 @@ UN = select,UN_Filter,img-url = https://raw.githubusercontent.com/Koolson/Qure/m
 
 [Remote Filter]
 
-HK_Filter = NameRegex, FilterKey = "(?i)(港|HK|Hong Kong|HongKong|hongkong)"
+HK_Filter = NameRegex, FilterKey = "(?i)(港|HK|Hong Kong|HongKong|hongkong|HKG)"
 JP_Filter = NameRegex, FilterKey = "(?i)(日本|东京|大阪|埼玉|JP|Japan|Tokyo|Osaka)"
 SG_Filter = NameRegex, FilterKey = "(?i)(新加坡|SG|Singapore)"
 US_Filter = NameRegex, FilterKey = "(?i)(美|US|USA|United States|UnitedStates|洛杉矶|圣何塞|圣克拉拉|西雅图|达拉斯|凤凰城|波特兰|硅谷|LA|San Jose|Seattle)"
@@ -59,10 +57,20 @@ FINAL,Available
 
 https://raw.githubusercontent.com/Loon0x00/LoonLiteRules/main/direct/cn.list, policy=DIRECT, tag=GEOIP_CN, enabled=true
 
-https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/OpenAI/OpenAI.list, policy=OpenAI, tag=OpenAI, enabled=true
+# ===== AI Tools（全部 AI 统一入口） =====
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/OpenAI/OpenAI.list, policy=AI Tools, tag=OpenAI, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Claude/Claude.list, policy=AI Tools, tag=Claude, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Gemini/Gemini.list, policy=AI Tools, tag=Gemini, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Copilot/Copilot.list, policy=AI Tools, tag=Copilot, enabled=true
+
+# ===== IM / Media =====
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Telegram/Telegram.list, policy=Telegram, tag=Telegram, enabled=true
-https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Game/Game.list, policy=Games, tag=Games, enabled=true
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/YouTube/YouTube.list, policy=YouTube, tag=YouTube, enabled=true
+
+# ===== Games =====
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Game/Game.list, policy=Games, tag=Games, enabled=true
+
+# ===== Global Proxy =====
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Proxy/Proxy.list, policy=Available, tag=Global, enabled=true
 
 [Rewrite]
@@ -88,6 +96,3 @@ https://kelee.one/Tool/Loon/Lpx/Bilibili_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/YouTube_remove_ads.lpx, enabled=true
 
 [Mitm]
-skip-server-cert-verify = 
-ca-p12 = 
-ca-passphrase = 
