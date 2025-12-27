@@ -24,20 +24,25 @@ test-timeout = 5
 
 [Proxy Group]
 
-Available = select,HK,JP,SG,US,UN,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Available.png
-AI Tools = select,JP,SG,US,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ChatGPT.png
+Available = select,HK,JP,SG,US,TW,KR,UN,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Available.png=
+AI Tools = select,JP_AI,SG_AI,US_AI,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ChatGPT.png
 Telegram = select,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png
 YouTube = select,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
+Google = select,US,JP,SG,HK,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Google.png
 Games = select,DIRECT,HK,JP,SG,Available,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
 
-HK = fallback,HK_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
-JP = fallback,JP_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
-SG = fallback,SG_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
-US = fallback,US_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
-TW = fallback,TW_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Taiwan.png
-KR = fallback,KR_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png
+HK = url-test,HK_Filter,interval = 300,tolerance = 50,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
+JP = url-test,JP_Filter,interval = 300,tolerance = 50,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
+SG = url-test,SG_Filter,interval = 300,tolerance = 50,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
+US = url-test,US_Filter,interval = 300,tolerance = 80,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
+TW = url-test,TW_Filter,interval = 300,tolerance = 50,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Taiwan.png
+KR = url-test,KR_Filter,interval = 300,tolerance = 50,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png
 
 UN = select,UN_Filter,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Global.png
+
+JP_AI = fallback,JP_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
+SG_AI = fallback,SG_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
+US_AI = fallback,US_Filter,interval = 1800,max-timeout = 5000,img-url = https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
 
 [Remote Filter]
 
@@ -51,16 +56,14 @@ KR_Filter = NameRegex, FilterKey = "(?i)(KR|Korea|KOR|韩|韓|首尔|Seoul)"
 UN_Filter = NameRegex, FilterKey = "(?i)^(?!.*(港|HK|Hong Kong|JP|Japan|日本|SG|Singapore|新加坡|US|USA|United States|美|TW|Taiwan|台|KR|Korea|韩)).*$"
 
 [Rule]
+GEOIP,cn,DIRECT
 FINAL,Available
 
 [Remote Rule]
 
-https://raw.githubusercontent.com/Loon0x00/LoonLiteRules/main/direct/cn.list, policy=DIRECT, tag=GEOIP_CN, enabled=true
-
 # ===== AI Tools（全部 AI 统一入口） =====
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/OpenAI/OpenAI.list, policy=AI Tools, tag=OpenAI, enabled=true
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Claude/Claude.list, policy=AI Tools, tag=Claude, enabled=true
-https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Gemini/Gemini.list, policy=AI Tools, tag=Gemini, enabled=true
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Copilot/Copilot.list, policy=AI Tools, tag=Copilot, enabled=true
 
 # ===== IM / Media =====
@@ -70,8 +73,26 @@ https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/
 # ===== Games =====
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Game/Game.list, policy=Games, tag=Games, enabled=true
 
+# ===== NSFW =====
+
+# ===== Google 全局代理 =====
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Google/Google.list, policy=Google, tag=Google, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Gemini/Gemini.list, policy=Google, tag=Gemini, enabled=true
+
+# ===== 国内核心 App（强制直连） =====
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/DouYin/DouYin.list, policy=DIRECT, tag=DouYin, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/WeChat/WeChat.list, policy=DIRECT, tag=WeChat, enabled=true
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/XiaoHongShu/XiaoHongShu.list, policy=DIRECT, tag=XiaoHongShu, enabled=true
+
+# ===== 中国服务 =====
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/China/China.list, policy=DIRECT, tag=China, enabled=true
+
 # ===== Global Proxy =====
 https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Proxy/Proxy.list, policy=Available, tag=Global, enabled=true
+
+# ===== 屏蔽 Adobe =====
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Adobe/Adobe.list, policy=REJECT, tag=Adobe, enabled=true
+
 
 [Rewrite]
 
