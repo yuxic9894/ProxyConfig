@@ -1,416 +1,405 @@
 
 /**
- * Loon Smart Select
- * Low latency + High throughput
+ * AutoVelocity - Loon 自动延迟 + 下载速度择优
  *
- * Requirements:
- * Loon Script API:
- * $config.getSubPolicies()
- * $config.getSelectedPolicy()
- * $config.setSelectPolicy()
- * $httpClient.get()
- * $persistentStore
+ * 流程：
+ * 1. 获取 AutoVelocity 下的所有真实节点
+ * 2. 并发测试延迟
+ * 3. 筛选最低延迟 + 30ms
+ * 4. 对候选节点进行下载测速
+ * 5. 选择吞吐量最高的节点
+ * 6. 自动切换策略组
  */
 
-const CONFIG = {
-  policyGroup: "AutoVelocity",
+var GROUP = "AutoVelocity";
 
-  // Latency threshold
-  latencyTolerance: 30,
+// 延迟测速
+var LATENCY_BYTES = 1024;
+var LATENCY_TIMEOUT = 8000;
+var LATENCY_CONCURRENCY = 8;
 
-  // Latency probes per node
-  latencyRounds: 3,
+// 下载测速
+var DOWNLOAD_BYTES = 3000000; // 3 MB
+var DOWNLOAD_TIMEOUT = 15000;
+var DOWNLOAD_CONCURRENCY = 2;
 
-  // Request timeout
-  requestTimeout: 12000,
+// 自动选路条件
+var LATENCY_TOLERANCE = 30;
+var MAX_SPEED_TEST_NODES = 12;
 
-  // Download test
-  downloadBytes: 5000000,
-  downloadTimeout: 25000,
+// Cloudflare 下载测速端点
+var SPEED_URL = "https://speed.cloudflare.com/__down?bytes=";
 
-  // Switch protection
-  speedImprovement: 1.20,
-  consecutiveWins: 2,
+var finished = false;
+var requestId = 0;
 
-  // Cloudflare test endpoints
-  latencyURL: "https://cp.cloudflare.com/generate_204",
-  downloadURL: "https://speed.cloudflare.com/__down?bytes=5000000",
+function log(message) {
+  console.log("[AutoVelocity] " + String(message));
+}
 
-  storageKey: "loon_smart_select_v1"
-};
-
-let finished = false;
-
-function finish(message) {
+function finish() {
   if (finished) return;
   finished = true;
-
-  console.log(message);
+  log("========== 测速任务结束 ==========");
   $done();
 }
 
-function median(values) {
-  const sorted = values.slice().sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-
-  return sorted.length % 2
-    ? sorted[middle]
-    : (sorted[middle - 1] + sorted[middle]) / 2;
+function getBytes(data) {
+  if (data === null || data === undefined) return 0;
+  if (typeof data === "string") return data.length;
+  if (typeof data.length === "number") return data.length;
+  return 0;
 }
 
-function getNodeName(item) {
-  if (typeof item === "string") return item;
-
-  if (item && typeof item === "object") {
-    return item.name || item.policy || item.node || "";
-  }
-
-  return "";
+function makeURL(bytes) {
+  requestId++;
+  return SPEED_URL + bytes + "&cache=" + Date.now() + "_" + requestId;
 }
 
-function requestLatency(node, callback) {
-  const samples = [];
-  let round = 0;
-
-  function next() {
-    if (round >= CONFIG.latencyRounds) {
-      callback(samples.length
-        ? median(samples)
-        : null);
-      return;
-    }
-
-    round++;
-
-    const start = Date.now();
-
-    $httpClient.get({
-      url: CONFIG.latencyURL,
-      node: node,
-      timeout: CONFIG.requestTimeout,
-      headers: {
-        "Cache-Control": "no-cache"
-      }
-    }, function(error, response) {
-      const elapsed = Date.now() - start;
-
-      if (
-        !error &&
-        response &&
-        response.status >= 200 &&
-        response.status < 400
-      ) {
-        samples.push(elapsed);
-      }
-
-      next();
-    });
-  }
-
-  next();
-}
-
-function requestSpeed(node, callback) {
-  const start = Date.now();
-
-  const url =
-    CONFIG.downloadURL +
-    "&_t=" + Date.now() + Math.random();
+function requestNode(node, bytes, timeout, callback) {
+  var started = Date.now();
 
   $httpClient.get({
-    url: url,
+    url: makeURL(bytes),
     node: node,
-    timeout: CONFIG.downloadTimeout,
-    "binary-mode": true,
-    headers: {
-      "Cache-Control": "no-cache"
-    }
+    timeout: timeout,
+    "binary-mode": true
   }, function(error, response, data) {
-    const elapsed = Date.now() - start;
+    var elapsed = Date.now() - started;
+    var status = response && response.status ? response.status : 0;
+    var received = getBytes(data);
 
-    if (
-      error ||
-      !response ||
-      response.status !== 200 ||
-      !data ||
-      !data.length ||
-      elapsed <= 0
-    ) {
-      callback(null);
+    if (error || status < 200 || status >= 300 || received <= 0) {
+      callback({
+        ok: false,
+        node: node,
+        latency: elapsed,
+        error: String(error || ("HTTP " + status)),
+        bytes: received
+      });
       return;
     }
-
-    const bytes = data.length;
-
-    // Mbps = bytes * 8 / milliseconds / 1000
-    const mbps = bytes * 8 / elapsed / 1000;
 
     callback({
-      mbps: mbps,
-      bytes: bytes,
-      elapsed: elapsed
+      ok: true,
+      node: node,
+      latency: elapsed,
+      bytes: received
     });
   });
 }
 
-function readHistory() {
-  try {
-    return JSON.parse(
-      $persistentStore.read(CONFIG.storageKey) || "{}"
-    );
-  } catch (e) {
-    return {};
-  }
-}
+// 并发任务队列
+function runPool(items, concurrency, worker, complete) {
+  var index = 0;
+  var active = 0;
+  var completed = 0;
+  var results = [];
 
-function saveHistory(data) {
-  $persistentStore.write(
-    JSON.stringify(data),
-    CONFIG.storageKey
-  );
-}
-
-function switchNode(node, current, reason) {
-  const success = $config.setSelectPolicy(
-    CONFIG.policyGroup,
-    node
-  );
-
-  if (success) {
-    $notification.post(
-      "Loon 智能选路",
-      "节点已切换",
-      current + " → " + node + "\n" + reason
-    );
+  if (items.length === 0) {
+    complete(results);
+    return;
   }
 
-  finish({
-    action: success ? "switch" : "switch_failed",
-    previous: current,
-    selected: node,
-    reason: reason
-  });
-}
+  function pump() {
+    while (active < concurrency && index < items.length) {
+      (function(item, currentIndex) {
+        active++;
 
-function runSpeedTests(candidates, callback) {
-  const results = [];
-  let index = 0;
+        worker(item, function(result) {
+          results[currentIndex] = result;
+          active--;
+          completed++;
 
-  function next() {
-    if (index >= candidates.length) {
-      callback(results);
-      return;
-    }
-
-    const candidate = candidates[index++];
-
-    requestSpeed(candidate.name, function(speed) {
-      if (speed) {
-        results.push({
-          name: candidate.name,
-          latency: candidate.latency,
-          speed: speed.mbps
+          if (completed === items.length) {
+            complete(results);
+          } else {
+            pump();
+          }
         });
-      }
+      })(items[index], index);
 
-      console.log({
-        stage: "bandwidth",
-        node: candidate.name,
-        latency: candidate.latency,
-        speed: speed ? speed.mbps : null
-      });
-
-      next();
-    });
+      index++;
+    }
   }
 
-  next();
+  pump();
 }
 
-function chooseBest(results, current) {
-  if (!results.length) {
-    finish("No valid bandwidth results. Keep current node.");
-    return;
+function getNodeNames(items) {
+  var result = [];
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+
+    if (typeof item === "string") {
+      if (item.length > 0) result.push(item);
+    } else if (item && item.type === "node" && item.name) {
+      result.push(item.name);
+    }
   }
 
-  results.sort((a, b) => b.speed - a.speed);
-
-  const best = results[0];
-
-  const currentResult = results.find(
-    item => item.name === current
-  );
-
-  console.log({
-    stage: "ranking",
-    results: results
-  });
-
-  // Current node is outside the latency window.
-  if (!currentResult) {
-    switchNode(
-      best.name,
-      current,
-      "当前节点不在低延迟候选区间，选择最快节点"
-    );
-    return;
-  }
-
-  // Already using the fastest node.
-  if (best.name === current) {
-    saveHistory({});
-    finish("Current node is already the fastest candidate.");
-    return;
-  }
-
-  const requiredSpeed =
-    currentResult.speed * CONFIG.speedImprovement;
-
-  if (best.speed < requiredSpeed) {
-    saveHistory({});
-    finish(
-      "Speed improvement below 20%. Keep current node."
-    );
-    return;
-  }
-
-  const history = readHistory();
-
-  if (history.pendingNode === best.name) {
-    history.pendingCount =
-      (history.pendingCount || 0) + 1;
-  } else {
-    history.pendingNode = best.name;
-    history.pendingCount = 1;
-  }
-
-  saveHistory(history);
-
-  if (history.pendingCount >= CONFIG.consecutiveWins) {
-    saveHistory({});
-
-    switchNode(
-      best.name,
-      current,
-      "连续两轮胜出，下载速度提升 " +
-      (best.speed / currentResult.speed * 100 - 100).toFixed(1) +
-      "%"
-    );
-
-    return;
-  }
-
-  finish({
-    action: "wait_confirmation",
-    current: current,
-    candidate: best.name,
-    currentSpeed: currentResult.speed,
-    candidateSpeed: best.speed,
-    consecutiveWins: history.pendingCount
-  });
+  return result;
 }
 
-function start() {
-  const group = CONFIG.policyGroup;
-  const current = $config.getSelectedPolicy(group);
+function startDownloadTests(candidates, currentSelected) {
+  log("进入下载速度测试阶段");
+  log("符合延迟条件的节点数: " + candidates.length);
 
-  if (!current) {
-    finish("Cannot read current policy. Check group name.");
-    return;
+  candidates.sort(function(a, b) {
+    return a.latency - b.latency;
+  });
+
+  if (candidates.length > MAX_SPEED_TEST_NODES) {
+    log(
+      "候选节点超过限制，按延迟选取前 " +
+      MAX_SPEED_TEST_NODES +
+      " 个"
+    );
+
+    candidates = candidates.slice(0, MAX_SPEED_TEST_NODES);
   }
 
-  $config.getSubPolicies(group, function(text) {
-    let rawNodes;
+  log("实际下载测速节点数: " + candidates.length);
+  log("单节点下载测试大小: " + DOWNLOAD_BYTES + " bytes");
 
-    try {
-      rawNodes = text ? JSON.parse(text) : [];
-    } catch (e) {
-      finish("Failed to parse policy group: " + e);
-      return;
-    }
+  runPool(
+    candidates,
+    DOWNLOAD_CONCURRENCY,
+    function(item, callback) {
+      log("下载测速: " + item.node);
 
-    const nodes = rawNodes
-      .map(getNodeName)
-      .filter(name =>
-        name &&
-        name !== "DIRECT" &&
-        name !== "REJECT" &&
-        name !== "REJECT-DROP"
-      );
+      requestNode(
+        item.node,
+        DOWNLOAD_BYTES,
+        DOWNLOAD_TIMEOUT,
+        function(result) {
+          if (!result.ok) {
+            log(
+              "下载失败: " + item.node +
+              " | " + result.error
+            );
 
-    if (!nodes.length) {
-      finish("No available nodes in policy group.");
-      return;
-    }
+            callback({
+              ok: false,
+              node: item.node,
+              latency: item.latency,
+              speed: 0,
+              bytes: result.bytes
+            });
 
-    console.log({
-      stage: "start",
-      group: group,
-      current: current,
-      totalNodes: nodes.length
-    });
+            return;
+          }
 
-    const latencyResults = [];
-    let index = 0;
+          // Mbps = bytes * 8 / milliseconds / 1000
+          var speed = result.bytes * 8 / result.latency / 1000;
 
-    function testNextNode() {
-      if (index >= nodes.length) {
-        finishLatency();
-        return;
-      }
+          log(
+            "下载结果: " + item.node +
+            " | 延迟 " + item.latency + " ms" +
+            " | 速度 " + speed.toFixed(2) + " Mbps"
+          );
 
-      const node = nodes[index++];
-
-      requestLatency(node, function(latency) {
-        if (latency !== null) {
-          latencyResults.push({
-            name: node,
-            latency: latency
+          callback({
+            ok: true,
+            node: item.node,
+            latency: item.latency,
+            speed: speed,
+            bytes: result.bytes
           });
         }
+      );
+    },
+    function(speedResults) {
+      var valid = [];
 
-        console.log({
-          stage: "latency",
-          node: node,
-          latency: latency
-        });
+      for (var i = 0; i < speedResults.length; i++) {
+        if (speedResults[i] && speedResults[i].ok) {
+          valid.push(speedResults[i]);
+        }
+      }
 
-        testNextNode();
-      });
-    }
-
-    function finishLatency() {
-      if (!latencyResults.length) {
-        finish("All latency tests failed. Keep current node.");
+      if (valid.length === 0) {
+        log("所有候选节点下载测速失败，不切换节点");
+        finish();
         return;
       }
 
-      const minLatency = Math.min.apply(
-        null,
-        latencyResults.map(item => item.latency)
-      );
-
-      const threshold =
-        minLatency + CONFIG.latencyTolerance;
-
-      const candidates = latencyResults.filter(
-        item => item.latency <= threshold
-      );
-
-      console.log({
-        stage: "filter",
-        minLatency: minLatency,
-        threshold: threshold,
-        candidates: candidates
+      valid.sort(function(a, b) {
+        return b.speed - a.speed;
       });
 
-      runSpeedTests(candidates, function(results) {
-        chooseBest(results, current);
-      });
+      var best = valid[0];
+
+      log("========== 下载测速排名 ==========");
+
+      for (var j = 0; j < valid.length; j++) {
+        log(
+          (j + 1) + ". " + valid[j].node +
+          " | " + valid[j].speed.toFixed(2) + " Mbps" +
+          " | 延迟 " + valid[j].latency + " ms"
+        );
+      }
+
+      log("最快节点: " + best.node);
+      log("最快速度: " + best.speed.toFixed(2) + " Mbps");
+
+      if (currentSelected === best.node) {
+        log("当前已经是最快节点，无需切换");
+      } else {
+        var changed = $config.setSelectPolicy(GROUP, best.node);
+
+        log("切换操作返回: " + String(changed));
+
+        if (changed) {
+          log("已切换至: " + best.node);
+        } else {
+          log("切换失败，请检查策略组和节点名称");
+        }
+      }
+
+      var summary = {
+        time: new Date().toISOString(),
+        group: GROUP,
+        selected: best.node,
+        speedMbps: best.speed,
+        latencyMs: best.latency,
+        tested: valid.length,
+        results: valid
+      };
+
+      $persistentStore.write(
+        JSON.stringify(summary),
+        "AutoVelocity_LastResult"
+      );
+
+      log("测速结果已保存");
+      finish();
     }
-
-    testNextNode();
-  });
+  );
 }
 
-start();
+function startLatencyTests(nodes) {
+  log("开始延迟测试，总节点数: " + nodes.length);
+
+  runPool(
+    nodes,
+    LATENCY_CONCURRENCY,
+    function(node, callback) {
+      requestNode(
+        node,
+        LATENCY_BYTES,
+        LATENCY_TIMEOUT,
+        function(result) {
+          if (result.ok) {
+            log(
+              "延迟: " + node +
+              " | " + result.latency + " ms"
+            );
+
+            callback({
+              ok: true,
+              node: node,
+              latency: result.latency
+            });
+          } else {
+            log(
+              "延迟测试失败: " + node +
+              " | " + result.error
+            );
+
+            callback({
+              ok: false,
+              node: node,
+              latency: 0
+            });
+          }
+        }
+      );
+    },
+    function(results) {
+      var valid = [];
+
+      for (var i = 0; i < results.length; i++) {
+        if (results[i] && results[i].ok) {
+          valid.push(results[i]);
+        }
+      }
+
+      if (valid.length === 0) {
+        log("没有可用节点，终止测速");
+        finish();
+        return;
+      }
+
+      valid.sort(function(a, b) {
+        return a.latency - b.latency;
+      });
+
+      var minLatency = valid[0].latency;
+      var threshold = minLatency + LATENCY_TOLERANCE;
+      var candidates = [];
+
+      log("最低延迟: " + minLatency + " ms");
+      log("延迟筛选上限: " + threshold + " ms");
+
+      for (var j = 0; j < valid.length; j++) {
+        if (valid[j].latency <= threshold) {
+          candidates.push(valid[j]);
+        }
+      }
+
+      log("延迟测试成功: " + valid.length + "/" + nodes.length);
+      log("延迟候选节点: " + candidates.length);
+
+      var currentSelected = $config.getSelectedPolicy(GROUP);
+
+      log("当前选择: " + String(currentSelected));
+
+      startDownloadTests(candidates, currentSelected);
+    }
+  );
+}
+
+log("========== AutoVelocity 开始 ==========");
+log("设备: " + $loon);
+log("策略组: " + GROUP);
+
+try {
+  var config = JSON.parse($config.getConfig() || "{}");
+  var groups = config.all_policy_groups || [];
+
+  if (groups.indexOf(GROUP) === -1) {
+    log("错误：找不到策略组 " + GROUP);
+    finish();
+  } else {
+    $config.getSubPolicies(GROUP, function(text) {
+      if (finished) return;
+
+      var items = [];
+
+      try {
+        items = JSON.parse(text || "[]");
+      } catch (e) {
+        log("节点列表解析失败: " + String(e));
+        finish();
+        return;
+      }
+
+      var nodes = getNodeNames(items);
+
+      log("获取到的真实节点数: " + nodes.length);
+
+      if (nodes.length === 0) {
+        log("错误：策略组中没有可用节点");
+        finish();
+        return;
+      }
+
+      startLatencyTests(nodes);
+    });
+  }
+} catch (e) {
+  log("脚本异常: " + String(e));
+  finish();
+}
